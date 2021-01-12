@@ -1,0 +1,40 @@
+proc surveyselect data = sashelp.BWeight method = SRS rep = 1 
+  sampsize = 5000 seed = 767 out = birthwtsamp;
+  id _all_; run;
+data birthwtsamp;
+	set birthwtsamp;
+	MomWtGain = MomWtGain + 27;
+proc format;
+   value MSfmt 0 = 'Non-Smoking Mother'  1 = 'Smoking Mother';
+run;
+proc sgplot data=birthwtsamp;
+	title 'Mothers Weight Gain as a Confounding Factor Related to Infant Weight';
+	reg x= MomWtGain y=Weight / Group = MomSmoke;
+run;
+proc anova data=birthwtsamp;
+	class MomSmoke;
+	model Weight = MomSmoke;
+	means MomSmoke;
+run;
+
+proc reg data=birthwtsamp;
+	title 'Regression Analysis Infant Weight by Mom Weight Gain';
+	model Weight = MomWtGain;
+	plot Weight*MomWtGain;
+run;
+proc sort;
+	by MomSmoke;
+proc glm data=birthwtsamp;
+	format MomSmoke MSfmt.;
+	class MomSmoke;
+	model Weight = MomSmoke MomWtGain MomSmoke*MomWtGain/ solution;
+run;
+proc glm data=birthwtsamp;
+	format MomSmoke MSfmt.;
+	class MomSmoke;
+	model Weight = MomSmoke MomWtGain / solution;
+	lsmeans MomSmoke / stderr pdiff cov out=adjmeans;
+run;
+proc print data = adjmeans;
+run;
+
